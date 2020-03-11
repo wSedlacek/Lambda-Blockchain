@@ -57,7 +57,7 @@ class Blockchain(object):
         :param previous_hash: (Optional) <str> Hash of previous Block
         :return: <dict> New Block
         """
-        if not proof:
+        if proof is None:
             raise Exception("Proof of work is required to create a new block!")
 
         block = Block(index=len(self.chain), timestamp=time(),
