@@ -1,14 +1,16 @@
 import requests
 
-from sys import argv
-from json import dumps
 from hashlib import sha256
+from json import dumps
+from sys import argv
+from typing import List
 
 
-def find_proof(block_string: str):
-    proof = 0
+def find_proof(block_string: str, starting: int):
+    proof = starting
     while not valid_proof(block_string, proof):
         proof += 1
+
     return proof
 
 
@@ -57,9 +59,10 @@ if __name__ == '__main__':
             print(r)
             break
 
-        new_proof = find_proof(dumps(data))
+        proof = find_proof(dumps(data), 0)
+
         r = requests.post(url=node + "/mine",
-                          json={"proof": new_proof, "miner": my_id})
+                          json={"proof": proof, "miner": my_id})
         data = r.json()
 
         if (data != "Invalid Proof"):
