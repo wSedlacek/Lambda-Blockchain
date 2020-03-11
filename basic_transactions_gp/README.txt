@@ -1,4 +1,4 @@
-Create a method in the `Blockchain` class called `new_transaction` 
+Create a method in the `Blockchain` class called `new_transaction`
 that adds a new transaction to the list of transactions:
 
     :param sender: <str> Address of the Recipient
