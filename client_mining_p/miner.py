@@ -66,7 +66,6 @@ if __name__ == '__main__':
 
             print("================")
             print("Mining...")
-            data['transations'].append(10)  # Finders Fee
             proof = find_proof(dumps(data), 0)
 
             try:

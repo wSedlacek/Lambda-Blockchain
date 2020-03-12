@@ -9,7 +9,7 @@ from flask import Flask, jsonify, request
 
 
 class Block():
-    def __init__(self, index: int, timestamp: float, proof: int, previous_hash: str, transations: List[int], miner: str):
+    def __init__(self, index: int, timestamp: float, proof: int, previous_hash: str, transations: List[float], miner: str):
         self.index = index
         self.timestamp = timestamp
         self.proof = proof
@@ -60,12 +60,15 @@ class Blockchain(object):
         if proof is None:
             raise Exception("Proof of work is required to create a new block!")
 
-        block = Block(index=len(self.chain), timestamp=time(),
+        block = Block(index=len(self), timestamp=time(),
                       proof=proof, previous_hash=previous_hash, transations=[*self.current_transactions], miner=miner)
 
         self.current_transactions = []
         self.chain.append(block)
         return block
+
+    def __len__(self):
+        return len(self.chain)
 
     @property
     def last_block(self):
@@ -101,12 +104,11 @@ def mine():
     proof = request.json['proof']
     miner = request.json['miner']
     last_block = blockchain.last_block
-    last_block.transactions.append(10)
     valid = Blockchain.valid_proof(str(last_block), proof)
+
     if valid:
         previous_hash = blockchain.last_block.hash()
-        block = blockchain.new_block(
-            proof=proof, previous_hash=previous_hash, miner=miner)
+        block = blockchain.new_block(proof, previous_hash, miner)
         return jsonify(dict(block)), 200
     else:
         return jsonify("Invalid Proof"), 400
