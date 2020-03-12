@@ -3,13 +3,16 @@ import requests
 from hashlib import sha256
 from json import dumps
 from sys import argv
+from time import perf_counter
 from typing import List
 
 
 def find_proof(block_string: str, starting: int):
     proof = starting
+    perf_counter()
     while not valid_proof(block_string, proof):
         proof += 1
+    print(f'Took: {int(perf_counter())}s')
 
     return proof
 
@@ -30,7 +33,7 @@ def valid_proof(block_string: str, proof: int):
     """
     work = f'{block_string} {proof}'.encode('utf-8')
     hashed = sha256(work).hexdigest()
-    return hashed[0] == "0" and hashed[1] == "0" and hashed[2] == "0"
+    return hashed[0:6] == "000000"
 
 
 if __name__ == '__main__':
@@ -43,28 +46,42 @@ if __name__ == '__main__':
     # Load ID
     f = open("my_id.txt", "r")
     my_id = f.read()
-    print("ID is", my_id)
+    print("ID:", my_id)
     f.close()
 
     coins_mined = 0
 
     while True:
-        r = requests.get(url=node + "/last_block")
-        # Handle non-json response
+
         try:
-            data = r.json()
-        except ValueError:
-            print("Error:  Non-json response")
-            print("Response returned:")
-            print(r)
+            request = requests.get(url=node + "/last_block")
+
+            try:
+                data = request.json()
+            except ValueError:
+                print("Error:  Non-json response")
+                print("Response returned:")
+                print(request)
+                break
+
+            print("================")
+            print("Mining...")
+            data['transations'].append(10)  # Finders Fee
+            proof = find_proof(dumps(data), 0)
+
+            try:
+                request = requests.post(
+                    url=node + "/mine", json={"proof": proof, "miner": my_id})
+                data = request.json()
+
+                if (data != "Invalid Proof"):
+                    coins_mined += 1
+                print(f"You now have {coins_mined} coins!")
+
+            except requests.exceptions.ConnectionError:
+                print("Could not post coin...")
+        except requests.exceptions.ConnectionError:
+            print("Could not fetch last coin...")
+        except KeyboardInterrupt:
+            print("Stoping...")
             break
-
-        proof = find_proof(dumps(data), 0)
-
-        r = requests.post(url=node + "/mine",
-                          json={"proof": proof, "miner": my_id})
-        data = r.json()
-
-        if (data != "Invalid Proof"):
-            coins_mined += 1
-            print(data)

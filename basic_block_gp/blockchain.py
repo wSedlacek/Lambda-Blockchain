@@ -103,7 +103,7 @@ class Blockchain(object):
         """
         work = f'{block_string} {proof}'.encode('utf-8')
         hashed = sha256(work).hexdigest()
-        return hashed[0] == "0" and hashed[1] == "0" and hashed[2] == "0"
+        return hashed[0:3] == "000"
 
 
 app = Flask(__name__)

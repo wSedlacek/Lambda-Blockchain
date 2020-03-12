@@ -88,7 +88,7 @@ class Blockchain(object):
         """
         work = f'{block_string} {proof}'.encode('utf-8')
         hashed = sha256(work).hexdigest()
-        return hashed[0] == "0" and hashed[1] == "0" and hashed[2] == "0"
+        return hashed[0:6] == "000000"
 
 
 app = Flask(__name__)
@@ -100,7 +100,9 @@ blockchain = Blockchain()
 def mine():
     proof = request.json['proof']
     miner = request.json['miner']
-    valid = Blockchain.valid_proof(str(blockchain.last_block), proof)
+    last_block = blockchain.last_block
+    last_block.transactions.append(10)
+    valid = Blockchain.valid_proof(str(last_block), proof)
     if valid:
         previous_hash = blockchain.last_block.hash()
         block = blockchain.new_block(
