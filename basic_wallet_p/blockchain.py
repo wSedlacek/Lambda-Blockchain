@@ -8,8 +8,26 @@ from uuid import uuid4
 from flask import Flask, jsonify, request
 
 
+def flatten(l): return [item for sublist in l for item in sublist]
+
+
+class Transaction():
+    def __init__(self, sender: str, receiver: str, amount: float):
+        self.sender = sender
+        self.receiver = receiver
+        self.amount = amount
+
+    def __iter__(self):
+        yield "amount", self.amount
+        yield "receiver", self.receiver
+        yield "sender", self.sender
+
+    def __str__(self):
+        return dumps(dict(self))
+
+
 class Block():
-    def __init__(self, index: int, timestamp: float, proof: int, previous_hash: str, transations: List[float], miner: str):
+    def __init__(self, index: int, timestamp: float, proof: int, previous_hash: str, transations: List[Transaction], miner: str):
         self.index = index
         self.timestamp = timestamp
         self.proof = proof
@@ -23,7 +41,7 @@ class Block():
         yield "previous_hash", self.previous_hash
         yield "proof", self.proof
         yield "timestamp", self.timestamp
-        yield "transations", self.transactions
+        yield "transations", [dict(transaction) for transaction in self.transactions]
 
     def __str__(self):
         return dumps(dict(self))
@@ -38,8 +56,8 @@ class Block():
 
 class Blockchain(object):
     def __init__(self):
-        self.chain: List(Block) = []
-        self.current_transactions: List[float] = []
+        self.chain: List[Block] = []
+        self.current_transactions: List[Transaction] = []
         self.new_block(proof="100")
 
     def new_block(self, proof: int, previous_hash: str = None, miner: str = None):
@@ -99,6 +117,16 @@ node_identifier = str(uuid4()).replace('-', '')
 blockchain = Blockchain()
 
 
+@app.route('/new_transaction', methods=['POST'])
+def new_transation():
+    sender = request.json['sender']
+    receiver = request.json['receiver']
+    amount = request.json['amount']
+    transaction = Transaction(sender, receiver, amount)
+    blockchain.current_transactions.append(transaction)
+    return jsonify(dict(transaction)), 200
+
+
 @app.route('/mine', methods=['POST'])
 def mine():
     proof = request.json['proof']
@@ -108,6 +136,9 @@ def mine():
 
     if valid:
         previous_hash = blockchain.last_block.hash()
+        reward = Transaction(
+            f"node {len(blockchain)}", miner, 1)
+        blockchain.current_transactions.append(reward)
         block = blockchain.new_block(proof, previous_hash, miner)
         return jsonify(dict(block)), 200
     else:
@@ -118,6 +149,31 @@ def mine():
 def full_chain():
     chain = [dict(block) for block in blockchain.chain]
     return jsonify(chain), 200
+
+
+@app.route('/<miner>/transactions', methods=['GET'])
+def transactions(miner):
+    transactions = [[dict(transaction) for transaction in block.transactions if transaction.receiver == miner or transaction.sender == miner]
+                    for block in blockchain.chain]
+    return jsonify(flatten(transactions)), 200
+
+
+@app.route('/<miner>/balance', methods=['GET'])
+def balance(miner):
+    transactions = [[dict(transaction) for transaction in block.transactions if transaction.receiver == miner or transaction.sender == miner]
+                    for block in blockchain.chain]
+
+    balance = 0
+    for transaction in flatten(transactions):
+        if transaction['sender'] == miner:
+            balance -= transaction['amount']
+
+        if transaction['receiver'] == miner:
+            balance += transaction['amount']
+
+        print(transaction)
+
+    return jsonify(balance), 200
 
 
 @app.route('/last_block', methods=['GET'])
